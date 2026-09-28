@@ -348,3 +348,6 @@ html[data-theme="dark"] .library-nav { background: var(--surface); }
 	.dialog-footer p { font-size: 11px; }
 }
 @media (hover: none) { .video-card:hover .thumb-button img { transform: none; } }
+
+#deleteVideo { margin-top: 12px; }
+#deleteVideo[hidden] { display: none; }

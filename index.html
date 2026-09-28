@@ -9,8 +9,8 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="style.css?v=20260928-2">
-	<script src="js.js?v=20260928-2" defer></script>
+	<link rel="stylesheet" href="style.css?v=20260928-3">
+	<script src="js.js?v=20260928-3" defer></script>
 </head>
 <body>
 	<header class="topbar">
@@ -44,7 +44,7 @@
 					<label class="field-label" for="newProfileName">Профили нав</label>
 					<div class="profile-create-row"><input class="profile-name-input" id="newProfileName" type="text" maxlength="32" placeholder="Номи шахс" required><button class="primary-button" type="submit">Сохтан</button></div>
 				</form>
-				<p class="profile-note">Ҳар профил видеоҳо, писандидаҳо ва рӯйхати тамошои худро дорад. Маълумот дар ҳамин браузер нигоҳ дошта мешавад.</p>
+				<p class="profile-note">Номи профили шумо дар зери видеоҳоятон менамояд. Писандидаҳо ва таърих дар ҳамин дастгоҳ нигоҳ дошта мешаванд.</p>
 			</div>
 		</dialog>
 
@@ -59,12 +59,12 @@
 			<label class="dropzone" for="videoFiles">
 				<span class="drop-icon">↑</span>
 				<strong>Видеоҳои худро интихоб кунед</strong>
-				<span id="uploadStatus">MP4, WebM ё MOV · як ё чанд файл</span>
+				<span id="uploadStatus">MP4, WebM ё MOV · як ё чанд файл (то 800 МБ)</span>
 				<input id="videoFiles" type="file" accept="video/*" multiple>
 			</label>
 			<ul class="selected-files" id="selectedFiles" aria-live="polite"></ul>
 			<div class="dialog-footer">
-				<p>Файлҳо танҳо дар ҳамин браузер нигоҳ дошта мешаванд.</p>
+				<p>Видео ба сервер бор мешавад ва ҳама онро мебинанд.</p>
 				<button class="primary-button" id="confirmUpload" type="submit" disabled>Илова ба китобхона</button>
 			</div>
 		</form>
@@ -75,6 +75,7 @@
 			<div class="player-heading"><div><p class="eyebrow">ВИДЕОИ ШУМО</p><h2 id="playerTitle"></h2></div><button class="dialog-close" type="button" data-close-dialog aria-label="Пӯшидан">×</button></div>
 			<video id="videoPlayer" controls playsinline preload="metadata"></video>
 			<p class="player-caption" id="playerCaption"></p>
+			<button class="primary-button" id="deleteVideo" type="button" hidden>Нест кардани видео</button>
 		</div>
 	</dialog>
 
