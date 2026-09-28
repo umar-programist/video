@@ -1,3 +1,11 @@
+// ===== ТАНЗИМОТ =====
+// Агар мехоҳед, ки ҳама одамон видео илова кунанд: Google Form месозед, натиҷаро дар Google Sheet
+// "Publish to web" (CSV) мекунед ва истинодҳоро ин ҷо мегузоред. Агар холӣ бошад, танҳо videos.json истифода мешавад.
+const CONFIG = {
+	SHEET_CSV_URL: '', // масалан: 'https://docs.google.com/spreadsheets/d/e/.../pub?output=csv'
+	FORM_URL: ''       // масалан: 'https://forms.gle/....'
+};
+
 // ===== Ислоҳҳо барои Android =====
 // 1. uid(): crypto.randomUUID() дар HTTP (Live Server аз телефон) вуҷуд надорад
 function uid() {
@@ -379,14 +387,19 @@ pageCopy['my-videos'] = ['Видеоҳои ман', 'Ҳамаи файлҳои �
 for (const category of videoCategories) pageCopy[category.id] = [category.label, `Видеоҳои шахсии шумо дар мавзӯи «${category.label}».`];
 const uploadDialog = document.querySelector('#uploadDialog');
 const uploadForm = document.querySelector('#uploadForm');
-const videoFilesInput = document.querySelector('#videoFiles');
+const driveLink = document.querySelector('#driveLink');
+const videoTitle = document.querySelector('#videoTitle');
+const uploadResult = document.querySelector('#uploadResult');
+const snippet = document.querySelector('#snippet');
+const formLink = document.querySelector('#formLink');
 const uploadCategory = document.querySelector('#uploadCategory');
-const selectedFiles = document.querySelector('#selectedFiles');
-const confirmUpload = document.querySelector('#confirmUpload');
 const playerDialog = document.querySelector('#playerDialog');
-const videoPlayer = document.querySelector('#videoPlayer');
-const deleteVideoButton = document.querySelector('#deleteVideo');
-let currentVideoId = null;
+const videoFrame = document.querySelector('#videoFrame');
+const driveOpen = document.querySelector('#driveOpen');
+
+const VIDEO_TYPES = { mp4: 'video/mp4', m4v: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', '3gp': 'video/3gpp', mkv: 'video/x-matroska', ogv: 'video/ogg' };
+const isVideoFile = file => file.type.startsWith('video/') || /\.(mp4|m4v|mov|webm|3gp|mkv|ogv)$/i.test(file.name);
+const videoType = file => file.type.startsWith('video/') ? file.type : (VIDEO_TYPES[file.name.split('.').pop().toLowerCase()] || 'video/mp4');
 
 function formatDuration(seconds) {
 	if (!Number.isFinite(seconds) || seconds < 0) return '--:--';
@@ -460,10 +473,10 @@ function filteredVideos(pageId, query = '') {
 function videoCard(video, index) {
 	const saved = getStored('later').includes(video.id);
 	const liked = getStored('liked').includes(video.id);
-	const poster = video.poster ? `<img src="${video.poster}" alt="" loading="lazy">` : `<span class="local-poster-label">${escapeHtml(categoryNames[video.category] || 'Видео')}</span>`;
+	const poster = video.poster ? `<img src="${video.poster}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : `<span class="local-poster-label">${escapeHtml(categoryNames[video.category] || 'Видео')}</span>`;
 	return `<article class="video-card" style="animation-delay:${Math.min(index * 35, 245)}ms">
 		<button class="thumb-button" data-watch="${video.id}" aria-label="Тамошо кардан: ${escapeHtml(video.title)}">
-			${poster}<span class="thumb-shade"></span>${video.mine ? '<span class="local-tag">МАН</span>' : ''}<span class="duration">${escapeHtml(video.duration)}</span>
+			${poster}<span class="thumb-shade"></span>${video.mine ? '<span class="local-tag">МАН</span>' : ''}${video.duration ? `<span class="duration">${escapeHtml(video.duration)}</span>` : ''}
 			<span class="card-play"><span><i class="play-triangle"></i></span></span>
 		</button>
 		<div class="card-body">
@@ -489,7 +502,7 @@ function render({ query = '' } = {}) {
 	const chips = ['Ҳама', ...videoCategories.slice(0, 8).map(category => category.id)];
 	const labels = { Ҳама: 'Ҳама', ...categoryNames };
 	const emptyTitle = page.id === 'liked' ? 'Ҳоло видеои писандида нест' : page.id === 'watch-later' ? 'Рӯйхати тамошо холӣ аст' : page.id === 'history' ? 'Таърихи тамошо холӣ аст' : 'Китобхона ҳоло холӣ аст';
-	const emptyCopy = page.id === 'liked' || page.id === 'watch-later' || page.id === 'history' ? 'Видеоҳоро тамошо кунед ё захира намоед, то ин рӯйхат пур шавад.' : 'Видеоҳои худро аз компютер интихоб карда, дар ҳамин ҷо тамошо кунед.';
+	const emptyCopy = page.id === 'liked' || page.id === 'watch-later' || page.id === 'history' ? 'Видеоҳоро тамошо кунед ё захира намоед, то ин рӯйхат пур шавад.' : 'Истиноди видеоро аз Google Drive илова кунед, ва ҳама онро мебинанд.';
 
 	view.innerHTML = `<div class="content-wrap">
 		<div class="page-heading"><div><p class="eyebrow">${query ? 'НАТИҶАИ ҶУСТУҶӮ' : isHome ? 'КИТОБХОНАИ ШАХСӢ' : 'ВИДЕОҲОИ ШУМО'}</p><h1>${query ? `Ҷустуҷӯ: “${escapeHtml(query)}”` : pageTitle}</h1><p class="page-subtitle">${query ? `${videosToShow.length} натиҷа ёфт шуд.` : pageSubtitle}</p></div><span class="heading-date">${formatDate()}</span></div>
@@ -497,13 +510,14 @@ function render({ query = '' } = {}) {
 		<section aria-labelledby="videoHeading">
 			<div class="section-heading"><div><h2 id="videoHeading">${query ? 'Натиҷаҳо' : isHome ? 'Ҳамаи видеоҳо' : 'Видеоҳо'}</h2>${!query && isHome ? '<p>Видеоҳое, ки одамон илова кардаанд</p>' : ''}</div><button class="section-link" data-open-upload><span>＋</span> Илова кардани видео</button></div>
 			${isHome ? `<div class="chips" aria-label="Филтр аз рӯи мавзӯъ">${chips.map(chip => `<button class="chip ${activeChip === chip ? 'active' : ''}" data-chip="${chip}">${labels[chip]}</button>`).join('')}</div>` : ''}
-			<div class="video-grid">${videosToShow.length ? videosToShow.map(videoCard).join('') : `<div class="empty-state"><span class="empty-symbol">＋</span><strong>${emptyTitle}</strong><p>${emptyCopy}</p>${page.id !== 'liked' && page.id !== 'watch-later' && page.id !== 'history' ? '<button class="primary-button" data-open-upload>Видео интихоб кунед</button>' : ''}</div>`}</div>
+			<div class="video-grid">${videosToShow.length ? videosToShow.map(videoCard).join('') : `<div class="empty-state"><span class="empty-symbol">＋</span><strong>${emptyTitle}</strong><p>${emptyCopy}</p>${page.id !== 'liked' && page.id !== 'watch-later' && page.id !== 'history' ? '<button class="primary-button" data-open-upload>Илова кардани видео</button>' : ''}</div>`}</div>
 		</section>
 	</div>`;
 }
 
 function openUploadDialog() {
 	if (!uploadCategory.options.length) uploadCategory.innerHTML = videoCategories.map(category => `<option value="${category.id}">${category.label}</option>`).join('');
+	uploadResult.hidden = true;
 	uploadDialog.showModal();
 }
 
@@ -513,35 +527,81 @@ function watchVideo(videoId) {
 	const history = getStored('history').filter(id => id !== videoId);
 	setStored('history', [videoId, ...history].slice(0, 50));
 	document.querySelector('#playerTitle').textContent = video.title;
-	currentVideoId = video.id;
-	deleteVideoButton.hidden = !video.mine;
-	document.querySelector('#playerCaption').textContent = `${video.channel} · ${categoryNames[video.category] || ''} · ${video.duration}`;
-	videoPlayer.src = video.url;
-	playerDialog.addEventListener('close', () => {
-		videoPlayer.pause();
-		videoPlayer.removeAttribute('src');
-		videoPlayer.load();
-	}, { once: true });
+	document.querySelector('#playerCaption').textContent = `${video.channel} · ${categoryNames[video.category] || ''}${video.duration ? ' · ' + video.duration : ''}`;
+	videoFrame.src = `https://drive.google.com/file/d/${video.driveId}/preview`;
+	driveOpen.href = `https://drive.google.com/file/d/${video.driveId}/view`;
+	playerDialog.addEventListener('close', () => { videoFrame.src = 'about:blank'; }, { once: true });
 	playerDialog.showModal();
-	videoPlayer.play().catch(() => {});
 	if (location.hash !== '#history') render({ query: searchInput.value });
+}
+
+// ---- Рӯйхати видеоҳо: videos.json (+ Google Sheet, агар танзим шуда бошад) ----
+function driveIdFrom(link) {
+	const text = String(link || '').trim();
+	const match = text.match(/\/d\/([\w-]{20,})/) || text.match(/[?&]id=([\w-]{20,})/) || text.match(/^([\w-]{25,})$/);
+	return match ? match[1] : '';
+}
+
+function parseCsv(text) {
+	const rows = [];
+	let row = [], field = '', quoted = false;
+	for (let i = 0; i < text.length; i++) {
+		const ch = text[i];
+		if (quoted) {
+			if (ch === '"' && text[i + 1] === '"') { field += '"'; i++; }
+			else if (ch === '"') quoted = false;
+			else field += ch;
+		} else if (ch === '"') quoted = true;
+		else if (ch === ',') { row.push(field); field = ''; }
+		else if (ch === '\n' || ch === '\r') {
+			if (ch === '\r' && text[i + 1] === '\n') i++;
+			row.push(field); rows.push(row); row = []; field = '';
+		} else field += ch;
+	}
+	if (field || row.length) { row.push(field); rows.push(row); }
+	return rows;
+}
+
+function normalizeVideo(item, index) {
+	const driveId = driveIdFrom(item.drive);
+	if (!driveId) return null;
+	const channel = String(item.channel || 'Ном нест').trim().slice(0, 32);
+	const label = String(item.category || '').trim().toLowerCase();
+	const byLabel = videoCategories.find(category => category.label.toLowerCase() === label);
+	return {
+		id: driveId, driveId,
+		title: String(item.title || 'Видео').trim().slice(0, 120),
+		category: categoryNames[item.category] ? item.category : (byLabel ? byLabel.id : 'other'),
+		duration: String(item.duration || '').slice(0, 10),
+		channel, initials: profileInitial(channel),
+		createdAt: Date.parse(item.date) || (Date.now() - index * 1000),
+		poster: `https://drive.google.com/thumbnail?id=${driveId}&sz=w720`,
+		mine: channel.toLowerCase() === activeProfile.name.trim().toLowerCase()
+	};
 }
 
 let videoSignature = '';
 async function refreshVideos(force = false) {
+	const items = [];
 	try {
-		const response = await fetch(`/api/videos?owner=${encodeURIComponent(activeProfile.id)}`, { cache: 'no-store' });
-		if (!response.ok) throw new Error('bad status');
-		const records = await response.json();
-		const signature = records.map(record => record.id + (record.mine ? 1 : 0) + record.poster).join();
-		if (!force && signature === videoSignature) return;
-		videoSignature = signature;
-		userVideos.splice(0, userVideos.length, ...records);
-		render({ query: searchInput.value });
-		renderProfileList();
-	} catch {
-		if (force) showToast('Сервер ҷавоб намедиҳад. Дар папка «node server.js»-ро иҷро кунед.');
+		const response = await fetch('videos.json?t=' + Date.now(), { cache: 'no-store' });
+		if (response.ok) items.push(...JSON.parse((await response.text()).replace(/,\s*([\]}])/g, '$1')));
+	} catch { if (force) showToast('Файли videos.json хонда нашуд. Сохтори онро санҷед.'); }
+	if (CONFIG.SHEET_CSV_URL) {
+		try {
+			const response = await fetch(CONFIG.SHEET_CSV_URL, { cache: 'no-store' });
+			if (response.ok) parseCsv(await response.text()).slice(1).forEach(row => items.push({ date: row[0], channel: row[1], title: row[2], category: row[3], drive: row[4] }));
+		} catch { }
 	}
+	try { items.push(...JSON.parse(localStorage.getItem('vida-local-videos') || '[]')); } catch { }
+	const seen = new Set();
+	const records = items.map(normalizeVideo).filter(record => record && !seen.has(record.id) && seen.add(record.id));
+	const signature = records.map(record => record.id + (record.mine ? 1 : 0)).join();
+	if (!force && signature === videoSignature) return;
+	videoSignature = signature;
+	userVideos.splice(0, userVideos.length, ...records);
+	render({ query: searchInput.value });
+	renderProfileList();
 }
 
 buildNav();
@@ -604,49 +664,29 @@ document.addEventListener('keydown', event => {
 	}
 });
 
-videoFilesInput.addEventListener('change', () => {
-	const files = Array.from(videoFilesInput.files || []).filter(file => file.type.startsWith('video/'));
-	selectedFiles.innerHTML = files.map(file => `<li>${escapeHtml(file.name)} <span>${(file.size / 1024 / 1024).toFixed(1)} МБ</span></li>`).join('');
-	document.querySelector('#uploadStatus').textContent = files.length ? `${files.length} видео интихоб шуд` : 'MP4, WebM ё MOV · як ё чанд файл';
-	confirmUpload.disabled = files.length === 0;
+uploadForm.addEventListener('submit', event => {
+	event.preventDefault();
+	const driveId = driveIdFrom(driveLink.value);
+	if (!driveId) { showToast('Истинод нодуруст аст. Истиноди файли Google Drive-ро гузоред.'); return; }
+	const item = { title: videoTitle.value.trim(), category: uploadCategory.value, channel: activeProfile.name, drive: driveId, date: new Date().toISOString().slice(0, 10) };
+	try {
+		const list = JSON.parse(localStorage.getItem('vida-local-videos') || '[]');
+		list.unshift(item);
+		localStorage.setItem('vida-local-videos', JSON.stringify(list));
+	} catch { }
+	snippet.value = '  ' + JSON.stringify(item) + ',';
+	uploadResult.hidden = false;
+	formLink.hidden = !CONFIG.FORM_URL;
+	formLink.href = CONFIG.FORM_URL || '#';
+	uploadForm.reset();
+	refreshVideos(true);
+	showToast('Видео барои шумо илова шуд.');
 });
 
-uploadForm.addEventListener('submit', async event => {
-	event.preventDefault();
-	const files = Array.from(videoFilesInput.files || []).filter(file => file.type.startsWith('video/'));
-	if (!files.length) return;
-	confirmUpload.disabled = true;
-	confirmUpload.textContent = 'Видеоҳо нигоҳ дошта мешаванд…';
-	try {
-		const records = [];
-		let done = 0;
-		for (const file of files) {
-			done += 1;
-			confirmUpload.textContent = `Боркунӣ… ${done}/${files.length}`;
-			const details = await readVideoDetails(file);
-			const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || file.name;
-			const query = new URLSearchParams({ owner: activeProfile.id, title, category: uploadCategory.value, duration: details.duration, channel: activeProfile.name, initials: profileInitial(activeProfile.name) });
-			const response = await fetch(`/api/videos?${query}`, { method: 'POST', headers: { 'Content-Type': file.type || 'video/mp4' }, body: file });
-			if (!response.ok) throw new Error('upload failed');
-			const record = await response.json();
-			if (details.poster) await fetch(`/api/videos/${record.id}/poster?owner=${encodeURIComponent(activeProfile.id)}`, { method: 'PUT', body: details.poster }).catch(() => { });
-			records.push(record);
-		}
-		await refreshVideos(true);
-		uploadDialog.close();
-		uploadForm.reset();
-		selectedFiles.innerHTML = '';
-		document.querySelector('#uploadStatus').textContent = 'MP4, WebM ё MOV · як ё чанд файл';
-		confirmUpload.textContent = 'Илова ба китобхона';
-		searchInput.value = '';
-		location.hash = '#my-videos';
-		render();
-		showToast(`${records.length} видео ба китобхона илова шуд.`);
-	} catch {
-		confirmUpload.disabled = false;
-		confirmUpload.textContent = 'Илова ба китобхона';
-		showToast('Видео бор нашуд. Пайвастшавӣ ба сервер ва ҳаҷми файлро санҷед.');
-	}
+document.querySelector('#copySnippet').addEventListener('click', async () => {
+	snippet.select();
+	try { await navigator.clipboard.writeText(snippet.value); } catch { document.execCommand('copy'); }
+	showToast('Нусха гирифта шуд.');
 });
 
 document.addEventListener('click', event => {
@@ -695,19 +735,4 @@ document.querySelectorAll('dialog.app-dialog').forEach(dialog => {
 	dialog.addEventListener('click', event => {
 		if (event.target === dialog) dialog.close();
 	});
-});
-// Агар формати видео дар ин телефон напазад, паём нишон медиҳем
-videoPlayer.addEventListener('error', () => {
-	if (videoPlayer.getAttribute('src')) showToast('Ин формат дар ин телефон намеравад. Видеоро бо формати MP4 (H.264) илова кунед.');
-});
-
-deleteVideoButton.addEventListener('click', async () => {
-	if (!currentVideoId || !confirm('Ин видеоро нест мекунед?')) return;
-	try {
-		const response = await fetch(`/api/videos/${currentVideoId}?owner=${encodeURIComponent(activeProfile.id)}`, { method: 'DELETE' });
-		if (!response.ok) throw new Error('delete failed');
-		playerDialog.close();
-		await refreshVideos(true);
-		showToast('Видео нест шуд.');
-	} catch { showToast('Видео нест нашуд.'); }
 });

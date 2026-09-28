@@ -351,3 +351,15 @@ html[data-theme="dark"] .library-nav { background: var(--surface); }
 
 #deleteVideo { margin-top: 12px; }
 #deleteVideo[hidden] { display: none; }
+
+/* ===== Google Drive ===== */
+.player-panel iframe { width: 100%; aspect-ratio: 16 / 9; max-height: min(72vh, 650px); display: block; border: 0; border-radius: 9px; background: #101713; }
+.drive-open { display: inline-block; margin-top: 10px; color: var(--accent-dark); font-size: 12px; font-weight: 700; text-decoration: underline; }
+.field-block { display: block; margin-bottom: 14px; }
+.upload-help { margin: 0 0 4px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.upload-result { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--line); }
+.upload-result[hidden], .upload-result a[hidden] { display: none; }
+.upload-result p { margin: 0 0 10px; font-size: 12px; line-height: 1.6; }
+.upload-result textarea { height: auto; padding: 10px 11px; font-family: monospace; font-size: 11px; resize: none; }
+.upload-result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 620px) { .upload-result textarea { font-size: 16px; } }

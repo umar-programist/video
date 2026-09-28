@@ -9,8 +9,8 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="style.css?v=20260928-3">
-	<script src="js.js?v=20260928-3" defer></script>
+	<link rel="stylesheet" href="style.css?v=20260928-5">
+	<script src="js.js?v=20260928-5" defer></script>
 </head>
 <body>
 	<header class="topbar">
@@ -44,28 +44,34 @@
 					<label class="field-label" for="newProfileName">Профили нав</label>
 					<div class="profile-create-row"><input class="profile-name-input" id="newProfileName" type="text" maxlength="32" placeholder="Номи шахс" required><button class="primary-button" type="submit">Сохтан</button></div>
 				</form>
-				<p class="profile-note">Номи профили шумо дар зери видеоҳоятон менамояд. Писандидаҳо ва таърих дар ҳамин дастгоҳ нигоҳ дошта мешаванд.</p>
+				<p class="profile-note">Номи профил ҳамчун номи канали шумо истифода мешавад: «Видеоҳои ман» видеоҳоеро нишон медиҳад, ки номи канал бо номи профили шумо як аст.</p>
 			</div>
 		</dialog>
 
 	<dialog class="app-dialog upload-dialog" id="uploadDialog" aria-labelledby="uploadTitle">
 		<form class="dialog-panel" id="uploadForm">
 			<div class="dialog-heading">
-				<div><p class="eyebrow">КИТОБХОНАИ ШАХСӢ</p><h2 id="uploadTitle">Видео илова кунед</h2></div>
+				<div><p class="eyebrow">GOOGLE DRIVE</p><h2 id="uploadTitle">Видео илова кунед</h2></div>
 				<button class="dialog-close" type="button" data-close-dialog aria-label="Пӯшидан">×</button>
 			</div>
+			<label class="field-label" for="driveLink">Истиноди видео дар Google Drive</label>
+			<input class="profile-name-input field-block" id="driveLink" type="url" inputmode="url" placeholder="https://drive.google.com/file/d/…/view" required>
+			<label class="field-label" for="videoTitle">Номи видео</label>
+			<input class="profile-name-input field-block" id="videoTitle" type="text" maxlength="120" required>
 			<label class="field-label" for="uploadCategory">Мавзӯи видео</label>
 			<select class="category-select" id="uploadCategory" required></select>
-			<label class="dropzone" for="videoFiles">
-				<span class="drop-icon">↑</span>
-				<strong>Видеоҳои худро интихоб кунед</strong>
-				<span id="uploadStatus">MP4, WebM ё MOV · як ё чанд файл (то 800 МБ)</span>
-				<input id="videoFiles" type="file" accept="video/*" multiple>
-			</label>
-			<ul class="selected-files" id="selectedFiles" aria-live="polite"></ul>
+			<p class="upload-help">Дар Drive: видеоро кушоед, «Share», баъд «Anyone with the link» (Ҳар кас бо истинод). Видео бояд то охир коркард шуда бошад.</p>
 			<div class="dialog-footer">
-				<p>Видео ба сервер бор мешавад ва ҳама онро мебинанд.</p>
-				<button class="primary-button" id="confirmUpload" type="submit" disabled>Илова ба китобхона</button>
+				<p>Номи канал: номи профили шумо.</p>
+				<button class="primary-button" id="confirmUpload" type="submit">Илова кардан</button>
+			</div>
+			<div class="upload-result" id="uploadResult" hidden>
+				<p><strong>Видео барои шумо илова шуд.</strong> Барои он ки ҳама бинанд, ин сатрро ба файли <code>videos.json</code> дар GitHub гузоред (баъди «[»):</p>
+				<textarea class="profile-name-input field-block" id="snippet" rows="3" readonly></textarea>
+				<div class="upload-result-actions">
+					<button class="primary-button" id="copySnippet" type="button">Нусха гирифтан</button>
+					<a class="primary-button" id="formLink" target="_blank" rel="noopener" hidden>Ба ҳама нишон додан (форма)</a>
+				</div>
 			</div>
 		</form>
 	</dialog>
@@ -73,9 +79,9 @@
 	<dialog class="app-dialog player-dialog" id="playerDialog" aria-labelledby="playerTitle">
 		<div class="player-panel">
 			<div class="player-heading"><div><p class="eyebrow">ВИДЕОИ ШУМО</p><h2 id="playerTitle"></h2></div><button class="dialog-close" type="button" data-close-dialog aria-label="Пӯшидан">×</button></div>
-			<video id="videoPlayer" controls playsinline preload="metadata"></video>
+			<iframe id="videoFrame" title="Видео" allow="autoplay; fullscreen" allowfullscreen></iframe>
 			<p class="player-caption" id="playerCaption"></p>
-			<button class="primary-button" id="deleteVideo" type="button" hidden>Нест кардани видео</button>
+			<a class="drive-open" id="driveOpen" target="_blank" rel="noopener">Агар видео намеравад, дар Google Drive кушоед</a>
 		</div>
 	</dialog>
 
